@@ -37,7 +37,17 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
   const [loading, setLoading] = useState(true);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [viewingTest, setViewingTest] = useState<Test | null>(null);
+  const [managerTab, setManagerTab] = useState<'requests' | 'catalogue'>('requests');
   const [modalTab, setModalTab] = useState<'details' | 'journey'>('details');
+  const [catalogueSearch, setCatalogueSearch] = useState('');
+
+  const filteredTests = tests.filter(t => 
+    t.name.toLowerCase().includes(catalogueSearch.toLowerCase()) ||
+    t.category.toLowerCase().includes(catalogueSearch.toLowerCase()) ||
+    t.loinc?.toLowerCase().includes(catalogueSearch.toLowerCase()) ||
+    t.snomed?.toLowerCase().includes(catalogueSearch.toLowerCase())
+  );
   
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
@@ -150,96 +160,175 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
     );
   };
 
+  const DUMMY_PRACTITIONERS = [
+    "Dr. Ahmad Ibrahim",
+    "Dr. Sarah Lim",
+    "Dr. Rajesh Kumar",
+    "Dr. Siti Aminah",
+    "Dr. Kevin Wong",
+    "Dr. Michelle Tan"
+  ];
+
+  const DUMMY_LOCATIONS = [
+    "Emergency Dept (ED)",
+    "Ward 5A (Medical)",
+    "Intensive Care Unit (ICU)",
+    "Outpatient Clinic (OPC)",
+    "Pediatrics Ward (4B)",
+    "Maternity Suite (3C)",
+    "Operating Theater (OT)"
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-slate-800">Test Archive & Requests</h2>
-        <button 
-          onClick={() => setShowOrderForm(true)}
-          className="glass-button flex items-center gap-2"
-        >
-          <Plus size={16} />
-          New Request
-        </button>
+    <>
+      <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white/40 border border-white/60 p-2 rounded-2xl">
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setManagerTab('requests')}
+            className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${managerTab === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white/60 text-slate-800'}`}
+          >
+            Diagnostic Requests
+          </button>
+          <button 
+            onClick={() => setManagerTab('catalogue')}
+            className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${managerTab === 'catalogue' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white/60 text-slate-800'}`}
+          >
+            Test Catalogue
+          </button>
+        </div>
+        
+        {managerTab === 'requests' && (
+          <button 
+            onClick={() => setShowOrderForm(true)}
+            className="glass-button flex items-center gap-2"
+          >
+            <Plus size={16} />
+            New Request
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {loading ? (
-          <div className="glass-panel p-12 text-center text-slate-400 font-semibold uppercase animate-pulse">Initializing_Test_Sync...</div>
-        ) : orders.map((o) => (
-          <div key={o.id} className="glass-card flex items-stretch">
-            <div className="p-5 bg-white/20 border-r border-black/5 flex flex-col justify-center items-center gap-1 w-28 shrink-0">
-              <span className="text-[10px] font-bold text-slate-400">UID</span>
-              <span className="text-xs font-black text-slate-800 uppercase">{o.id.substring(0, 6)}</span>
-            </div>
-            
-            <div className="p-6 flex-1 flex items-center justify-between">
-              <div>
-                <h3 className="font-extrabold text-slate-900 mb-1">{o.patientName || 'Clinical Subject'}</h3>
-                <div className="flex items-center gap-4">
-                  <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                    <Clock size={12} /> {formatDate(o.createdAt)}
-                  </span>
-                  {o.priority && o.priority !== 'Routine' && (
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1 ${
-                      o.priority === 'STAT' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-amber-100 text-amber-600'
-                    }`}>
-                      <Zap size={10} /> {o.priority}
-                    </span>
-                  )}
-                  <span className={`status-pill ${
-                    o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                    o.status === 'In-Progress' ? 'bg-blue-100 text-blue-700' :
-                    'bg-amber-100 text-amber-700'
-                  }`}>
-                    {o.status}
-                  </span>
+      {managerTab === 'requests' ? (
+        <div className="grid grid-cols-1 gap-4">
+          {loading ? (
+            <div className="glass-panel p-12 text-center text-slate-400 font-semibold uppercase animate-pulse">Initializing_Order_Sync...</div>
+          ) : (
+            orders.map((o) => (
+              <div key={o.id} className="glass-card flex items-stretch">
+                <div className="p-5 bg-white/20 border-r border-black/5 flex flex-col justify-center items-center gap-1 w-28 shrink-0">
+                  <span className="text-[10px] font-bold text-slate-400">UID</span>
+                  <span className="text-xs font-black text-slate-800 uppercase">{o.id.substring(0, 6)}</span>
+                </div>
+                
+                <div className="p-6 flex-1 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 mb-1">{o.patientName || 'Clinical Subject'}</h3>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Clock size={12} /> {formatDate(o.createdAt)}
+                      </span>
+                      {o.priority && o.priority !== 'Routine' && (
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1 ${
+                          o.priority === 'STAT' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-amber-100 text-amber-600'
+                        }`}>
+                          <Zap size={10} /> {o.priority}
+                        </span>
+                      )}
+                      <span className={`status-pill ${
+                        o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                        o.status === 'In-Progress' ? 'bg-blue-100 text-blue-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {o.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setViewingOrder(o)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center gap-2"
+                      title="View Details"
+                    >
+                      <Eye size={18} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest hidden md:inline">Details</span>
+                    </button>
+
+                    <button 
+                      onClick={() => alert('Initiating High-Resolution Label Printing Protocol...')}
+                      className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all flex items-center gap-2"
+                      title="Print Specimen Labels"
+                    >
+                      <Printer size={18} />
+                    </button>
+
+                    {o.status === 'Pending' && (
+                      <button 
+                        onClick={() => updateStatus(o.id, 'Collected')}
+                        className="px-4 py-2 bg-white/40 border border-white/60 hover:bg-white/60 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl flex items-center gap-2"
+                      >
+                        <Beaker size={14} /> Specimen Collected
+                      </button>
+                    )}
+                    {o.status === 'Collected' && (
+                      <button 
+                        onClick={() => updateStatus(o.id, 'In-Progress')}
+                        className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl flex items-center gap-2"
+                      >
+                        <Activity size={14} /> Start Scans
+                      </button>
+                    )}
+                    {o.status === 'Completed' && (
+                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                        <CheckCircle2 size={20} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setViewingOrder(o)}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center gap-2"
-                  title="View Details"
-                >
-                  <Eye size={18} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest hidden md:inline">Details</span>
-                </button>
-
-                <button 
-                  onClick={() => alert('Initiating High-Resolution Label Printing Protocol...')}
-                  className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all flex items-center gap-2"
-                  title="Print Specimen Labels"
-                >
-                  <Printer size={18} />
-                </button>
-
-                {o.status === 'Pending' && (
-                  <button 
-                    onClick={() => updateStatus(o.id, 'Collected')}
-                    className="px-4 py-2 bg-white/40 border border-white/60 hover:bg-white/60 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl flex items-center gap-2"
-                  >
-                    <Beaker size={14} /> Specimen Collected
-                  </button>
-                )}
-                {o.status === 'Collected' && (
-                  <button 
-                    onClick={() => updateStatus(o.id, 'In-Progress')}
-                    className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl flex items-center gap-2"
-                  >
-                    <Activity size={14} /> Start Scans
-                  </button>
-                )}
-                {o.status === 'Completed' && (
-                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                    <CheckCircle2 size={20} />
-                  </button>
-                )}
-              </div>
-            </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search Test Catalogue (LOINC, SNOMED, Name)..." 
+              className="w-full bg-white border-2 border-slate-100 p-6 pl-16 rounded-[2.5rem] outline-none focus:border-blue-500 transition-all font-bold text-slate-800"
+              value={catalogueSearch}
+              onChange={(e) => setCatalogueSearch(e.target.value)}
+            />
           </div>
-        ))}
+          <div className="grid grid-cols-3 gap-6">
+            {filteredTests.map(t => (
+              <div key={t.id} className="glass-panel group hover:border-blue-300 transition-all cursor-pointer overflow-hidden p-0" onClick={() => setViewingTest(t)}>
+                <div className="p-8 space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                      <Activity size={24} />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Fee</p>
+                      <p className="text-xl font-black text-slate-900">RM {t.price?.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">{t.name}</h3>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[3px] mt-2">{t.category}</p>
+                  </div>
+                  <div className="flex items-center gap-3 pt-4 border-t border-slate-50">
+                    <span className="flex-1 text-[10px] font-black text-blue-600 uppercase tracking-widest">Specifications</span>
+                    <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       </div>
 
       <AnimatePresence>
@@ -322,37 +411,49 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                   {formStep === 2 && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
                       <div className="grid grid-cols-3 gap-10">
-                        <div className="col-span-2 space-y-8">
-                          <div className="grid grid-cols-2 gap-8">
-                            <div>
-                              <label className="input-label">Request Ref #</label>
-                              <input type="text" className="modern-input" value={requestNumber} onChange={e => setRequestNumber(e.target.value)} placeholder="SYS-100234" />
-                            </div>
-                            <div>
-                              <label className="input-label">Ordering Clinician *</label>
-                              <div className="relative">
-                                <input type="text" className="modern-input pr-10" value={practitioner} onChange={e => setPractitioner(e.target.value)} placeholder="Dr Andrew Sysmex" />
-                                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                              </div>
-                            </div>
+                        {/* Column 1: Core IDs */}
+                        <div className="space-y-8">
+                          <div>
+                            <label className="input-label">Request Ref #</label>
+                            <input type="text" className="modern-input" value={requestNumber} onChange={e => setRequestNumber(e.target.value)} placeholder="SYS-100234" />
                           </div>
-
-                          <div className="grid grid-cols-2 gap-8">
-                            <div>
-                              <label className="input-label">Collection Location</label>
-                              <div className="relative">
-                                <input type="text" className="modern-input pr-10" value={location} onChange={e => setLocation(e.target.value)} placeholder="Outpatient Dept (OPD1)" />
-                                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="input-label">External Hospital #</label>
-                              <input type="text" className="modern-input" value={hospitalNumber} onChange={e => setHospitalNumber(e.target.value)} placeholder="HOSP-442" />
+                          <div>
+                            <label className="input-label">Collection Location</label>
+                            <div className="relative">
+                              <select className="modern-input appearance-none pr-10" value={location} onChange={e => setLocation(e.target.value)}>
+                                <option value="">Select Location</option>
+                                {DUMMY_LOCATIONS.map(l => (
+                                  <option key={l} value={l}>{l}</option>
+                                ))}
+                              </select>
+                              <ChevronLeft className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-[270deg]" size={18} />
                             </div>
                           </div>
                         </div>
 
-                        <div className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-8">
+                        {/* Column 2: Practitioner & External Ref */}
+                        <div className="space-y-8">
+                          <div>
+                            <label className="input-label">Ordering Practitioner *</label>
+                            <div className="relative">
+                              <select className="modern-input appearance-none pr-10" value={practitioner} onChange={e => setPractitioner(e.target.value)}>
+                                <option value="">Select Practitioner</option>
+                                {DUMMY_PRACTITIONERS.map(p => (
+                                  <option key={p} value={p}>{p}</option>
+                                ))}
+                                <option value="External">External Physician...</option>
+                              </select>
+                              <ChevronLeft className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-[270deg]" size={18} />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="input-label">External Hospital #</label>
+                            <input type="text" className="modern-input" value={hospitalNumber} onChange={e => setHospitalNumber(e.target.value)} placeholder="HOSP-442" />
+                          </div>
+                        </div>
+
+                        {/* Column 3: Logistics & Triage */}
+                        <div className="space-y-8">
                           <div>
                             <label className="input-label">Priority Triage</label>
                             <select value={priority} onChange={e => setPriority(e.target.value as any)} className="modern-input">
@@ -363,9 +464,9 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                           </div>
                           <div>
                             <label className="input-label">In-Flight Logistics</label>
-                            <label className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 cursor-pointer shadow-sm">
+                            <label className="flex items-center gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100 cursor-pointer transition-all hover:bg-slate-100 h-[60px]">
                               <input type="checkbox" checked={pregnant} onChange={e => setPregnant(e.target.checked)} className="w-5 h-5 rounded-lg text-blue-600 focus:ring-blue-500" />
-                              <span className="text-xs font-black uppercase tracking-widest text-slate-600">Pregnancy Scan</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Pregnancy Scan</span>
                             </label>
                           </div>
                         </div>
@@ -417,24 +518,34 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                           {tests.map(t => (
-                            <button
+                            <div
                               key={t.id}
-                              type="button"
-                              onClick={() => toggleTest(t.id)}
-                              className={`p-6 rounded-3xl border-2 text-left transition-all relative ${
+                              className={`p-6 rounded-3xl border-2 text-left transition-all relative group ${
                                 selectedTests.includes(t.id) 
                                   ? 'bg-blue-600 border-blue-600 text-white shadow-2xl shadow-blue-500/20' 
                                   : 'bg-white border-slate-100 hover:border-blue-200'
                               }`}
                             >
                               <div className="flex justify-between items-start">
-                                <div>
+                                <div 
+                                  className="flex-1 cursor-pointer"
+                                  onClick={() => toggleTest(t.id)}
+                                >
                                   <p className="text-sm font-black tracking-tight leading-tight">{t.name}</p>
                                   <p className={`text-[10px] font-bold uppercase mt-1 opacity-60 tracking-widest`}>{t.category}</p>
                                 </div>
-                                {selectedTests.includes(t.id) && <div className="p-1 bg-white/20 rounded-lg"><Check size={14} /></div>}
+                                <div className="flex flex-col items-end gap-2">
+                                  {selectedTests.includes(t.id) && <div className="p-1 bg-white/20 rounded-lg"><Check size={14} /></div>}
+                                  <button 
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setViewingTest(t); }}
+                                    className={`p-2 rounded-xl transition-all ${selectedTests.includes(t.id) ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600'}`}
+                                  >
+                                    <Info size={16} />
+                                  </button>
+                                </div>
                               </div>
-                            </button>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -517,6 +628,115 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                       Authorize Order <Send size={18} />
                     </button>
                   )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {viewingTest && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-2xl bg-white rounded-[3rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.4)] border border-white/40 overflow-hidden"
+            >
+              <div className="bg-slate-900 text-white p-12 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
+                      <Stethoscope size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[4px] opacity-50">Analytical Specification</p>
+                      <h2 className="text-3xl font-black tracking-tight">{viewingTest.name}</h2>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">{viewingTest.category}</span>
+                    <span className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">{viewingTest.department}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setViewingTest(null)}
+                  className="absolute top-10 right-10 p-2 text-white/40 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-12 space-y-12">
+                <div className="grid grid-cols-2 gap-12">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                        <Activity size={16} />
+                      </div>
+                      <h4 className="text-[10px] font-black uppercase tracking-[3px] text-slate-400">Normal Range Protocol</h4>
+                    </div>
+                    <div className="bg-slate-50/50 p-6 rounded-3xl border border-black/[0.03]">
+                      <p className="text-2xl font-black text-slate-900">{viewingTest.normalRange}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mt-2">{viewingTest.unit}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                        <Zap size={16} />
+                      </div>
+                      <h4 className="text-[10px] font-black uppercase tracking-[3px] text-slate-400">Financial Authorization</h4>
+                    </div>
+                    <div className="bg-emerald-50/30 p-6 rounded-3xl border border-emerald-500/10">
+                      <p className="text-2xl font-black text-emerald-900">RM {viewingTest.price?.toFixed(2)}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mt-2">Standard Fee (MYR)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-[3px] text-slate-400 border-b border-slate-50 pb-4">Standardized Nomenclature (LOINC/SNOMED)</h4>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="p-6 bg-slate-50/50 rounded-[2rem] flex items-center justify-between border border-black/[0.03]">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">LOINC CODE</p>
+                        <p className="text-base font-black text-slate-900 font-mono tracking-tight">{viewingTest.loinc || 'UNASSIGNED'}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-300 shadow-sm">
+                        <Milestone size={20} />
+                      </div>
+                    </div>
+                    <div className="p-6 bg-slate-50/50 rounded-[2rem] flex items-center justify-between border border-black/[0.03]">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">SNOMED RT-ID</p>
+                        <p className="text-base font-black text-slate-900 font-mono tracking-tight">{viewingTest.snomed || 'UNMAPPED'}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-300 shadow-sm">
+                        <Barcode size={20} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-50 flex justify-between items-center">
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-400">
+                        {String.fromCharCode(64 + i)}
+                      </div>
+                    ))}
+                    <div className="pl-4">
+                      <p className="text-[9px] font-black text-slate-900 uppercase">System Integrity Checked</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-widest">Calibration: Valid</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setViewingTest(null)}
+                    className="px-12 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-black uppercase tracking-[4px] rounded-2xl transition-all"
+                  >
+                    Dismiss Specification
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -705,7 +925,7 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
 

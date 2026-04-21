@@ -1,11 +1,11 @@
 import React from 'react';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { Patient, Order, Result } from '../types';
 import { formatDate } from './utils';
 
 export const generateReport = (patient: Patient, order: Order, results: Result[]) => {
-  const doc = new jsPDF() as any;
+  const doc = new jsPDF();
 
   // Header
   doc.setFontSize(22);
@@ -42,7 +42,7 @@ export const generateReport = (patient: Patient, order: Order, results: Result[]
     'See Reference'
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 75,
     head: [['Test Description', 'Result Value', 'Flag', 'Reference Range']],
     body: tableData,
