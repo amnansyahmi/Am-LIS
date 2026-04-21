@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Order, Result, Patient, UserProfile, Department } from '../types';
 import { 
@@ -24,6 +24,7 @@ const ResultsManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [results, setResults] = useState<Result[]>([]);
+  const [historicalResults, setHistoricalResults] = useState<Record<string, Result>>({});
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'Worksheet' | 'Designer'>('Worksheet');
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
@@ -56,14 +57,37 @@ const ResultsManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) 
   useEffect(() => {
     if (selectedOrderId) {
       const q = query(collection(db, 'results'), where('orderId', '==', selectedOrderId));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        setResults(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Result)));
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const currentResults = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Result));
+        setResults(currentResults);
+
+        // Fetch historical for delta comparison
+        const order = activeOrders.find(o => o.id === selectedOrderId);
+        if (order) {
+          const histQ = query(
+            collection(db, 'results'), 
+            where('testId', 'in', order.testIds.length > 0 ? order.testIds : ['dummy']),
+            orderBy('updatedAt', 'desc')
+          );
+          const histSnap = await getDocs(histQ);
+          const histMap: Record<string, Result> = {};
+          
+          histSnap.docs.forEach(doc => {
+            const data = { id: doc.id, ...doc.data() } as Result;
+            // Only take the first one that isn't the current order
+            if (data.orderId !== selectedOrderId && !histMap[data.testId]) {
+              histMap[data.testId] = data;
+            }
+          });
+          setHistoricalResults(histMap);
+        }
       });
       return () => unsubscribe();
     } else {
       setResults([]);
+      setHistoricalResults({});
     }
-  }, [selectedOrderId]);
+  }, [selectedOrderId, activeOrders]);
 
   const handleUpdateResult = async (resultId: string, value: string) => {
     try {
@@ -253,39 +277,61 @@ const ResultsManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) 
                   </div>
 
                   <div className="space-y-4">
-                    {results.map((r) => (
-                      <div key={r.id} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 bg-white/40 border border-white/60 rounded-2xl group hover:border-blue-300 transition-all">
-                        <div className="md:col-span-4">
-                          <p className="text-[10px] font-black text-blue-500 uppercase mb-1 tracking-widest">{r.testName}</p>
-                          <p className="text-xs font-bold text-slate-400">Ref Range: 4.5 - 11.2 (mg/dL)</p>
+                    {results.map((r) => {
+                      const prev = historicalResults[r.testId];
+                      const deltaVal = prev ? Math.abs((parseFloat(r.value) - parseFloat(prev.value)) / parseFloat(prev.value)) * 100 : 0;
+                      const hasDelta = deltaVal > 20;
+
+                      return (
+                        <div key={r.id} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 bg-white/40 border border-white/60 rounded-2xl group hover:border-blue-300 transition-all relative overflow-hidden">
+                          {hasDelta && (
+                            <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded-bl-xl shadow-lg">
+                              Delta Alert ({deltaVal.toFixed(1)}%)
+                            </div>
+                          )}
+                          <div className="md:col-span-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{r.testName}</p>
+                              {r.loinc && <span className="text-[8px] text-slate-400 font-mono">LOINC: {r.loinc}</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-slate-400">Ref: 4.5 - 11.2</p>
+                              {prev && (
+                                <p className="text-[9px] font-bold text-slate-300 italic">
+                                  Prev: {prev.value} ({prev.flag})
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="md:col-span-5 flex gap-4 items-center">
+                            <input 
+                              type="text" 
+                              value={r.value}
+                              onChange={(e) => handleUpdateResult(r.id, e.target.value)}
+                              placeholder="INPUT_VAL"
+                              className="flex-1 bg-white border border-black/10 p-3 rounded-xl text-center font-black text-slate-900 outline-none focus:border-blue-500 transition-all text-sm"
+                            />
+                            {hasDelta && <AlertCircle size={14} className="text-amber-500 animate-pulse" />}
+                          </div>
+                          <div className="md:col-span-3 text-right">
+                            <select 
+                              className={`status-pill w-full text-center border-none outline-none appearance-none cursor-pointer text-[10px] font-black ${
+                                r.flag === 'Normal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                              }`}
+                              value={r.flag}
+                              onChange={async (e) => {
+                                const docRef = doc(db, 'results', r.id);
+                                await updateDoc(docRef, { flag: e.target.value as any });
+                              }}
+                            >
+                              <option value="Normal">PASS [NORMAL]</option>
+                              <option value="High">HIGH [CRITICAL]</option>
+                              <option value="Low">LOW [CRITICAL]</option>
+                            </select>
+                          </div>
                         </div>
-                        <div className="md:col-span-5 flex gap-4 items-center">
-                          <input 
-                            type="text" 
-                            value={r.value}
-                            onChange={(e) => handleUpdateResult(r.id, e.target.value)}
-                            placeholder="INPUT_VAL"
-                            className="flex-1 bg-white border border-black/10 p-3 rounded-xl text-center font-black text-slate-900 outline-none focus:border-blue-500 transition-all text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-3 text-right">
-                          <select 
-                            className={`status-pill w-full text-center border-none outline-none appearance-none cursor-pointer text-[10px] font-black ${
-                              r.flag === 'Normal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                            }`}
-                            value={r.flag}
-                            onChange={async (e) => {
-                              const docRef = doc(db, 'results', r.id);
-                              await updateDoc(docRef, { flag: e.target.value as any });
-                            }}
-                          >
-                            <option value="Normal">PASS [NORMAL]</option>
-                            <option value="High">HIGH [CRITICAL]</option>
-                            <option value="Low">LOW [CRITICAL]</option>
-                          </select>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </motion.div>

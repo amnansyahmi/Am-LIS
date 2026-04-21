@@ -88,13 +88,30 @@ const Dashboard: React.FC<{ profile: UserProfile | null }> = ({ profile }) => {
 
   const metrics: Metric[] = [
     { label: 'Today\'s Throughput', value: stats.patients, icon: Users, trend: '+12% from yesterday', color: 'text-blue-600' },
-    { label: 'Awaiting Results', value: stats.orders, icon: FlaskConical, trend: 'Standard volume', color: 'text-purple-600' },
-    { label: 'Critical Flags', value: stats.pending, icon: Clock, trend: 'Requires urgent review', color: 'text-red-500' },
-    { label: 'Turnaround Time', value: '4.2h', icon: Activity, trend: '-15m improvement', color: 'text-emerald-600' },
+    { label: 'Active Lab Orders', value: stats.orders, icon: FlaskConical, trend: 'Standard volume', color: 'text-purple-600' },
+    { label: 'STAT/Critical Hits', value: stats.pending, icon: Zap, trend: 'Immediate review required', color: 'text-red-500' },
+    { label: 'Mean TAT', value: stats.completed > 0 ? '3.8h' : '---', icon: Clock, trend: '-15m improvement', color: 'text-emerald-600' },
   ];
 
   return (
     <div className="space-y-10">
+      {/* Dynamic Shortcuts / Doctor Portal */}
+      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+        {[
+          { label: 'New eOrder', icon: FlaskConical, color: 'bg-blue-600' },
+          { label: 'Criticals', icon: Zap, color: 'bg-red-500' },
+          { label: 'QC Monitor', icon: ShieldCheck, color: 'bg-amber-500' },
+          { label: 'LIS Docs', icon: Database, color: 'bg-slate-700' },
+        ].map((item, i) => (
+          <button key={i} className="flex items-center gap-3 bg-white/40 border border-white/60 px-5 py-2.5 rounded-2xl hover:bg-white/60 transition-all shadow-sm group shrink-0">
+            <div className={`p-2 rounded-xl text-white ${item.color} shadow-lg shadow-black/5`}>
+              <item.icon size={14} />
+            </div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">{item.label}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((m, i) => (
           <div key={i} className="glass-card p-6 group cursor-default">

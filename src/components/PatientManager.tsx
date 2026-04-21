@@ -7,16 +7,19 @@ import {
   Search, 
   ChevronRight,
   Filter,
-  MoreVertical
+  MoreVertical,
+  History as HistoryIcon
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import PatientHistory from './PatientHistory';
 
 const PatientManager: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewingHistory, setViewingHistory] = useState<Patient | null>(null);
 
   const [newPatient, setNewPatient] = useState({
     name: '',
@@ -118,9 +121,19 @@ const PatientManager: React.FC = () => {
                     {formatDate(p.createdAt)}
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
-                      <ChevronRight size={20} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => setViewingHistory(p)}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center gap-2 group/btn"
+                        title="View Medical History"
+                      >
+                        <HistoryIcon size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden group-hover/btn:block">History</span>
+                      </button>
+                      <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                        <MoreVertical size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -130,6 +143,12 @@ const PatientManager: React.FC = () => {
       </div>
 
       <AnimatePresence>
+        {viewingHistory && (
+          <PatientHistory 
+            patient={viewingHistory} 
+            onClose={() => setViewingHistory(null)} 
+          />
+        )}
         {showAddForm && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div 

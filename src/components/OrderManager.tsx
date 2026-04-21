@@ -17,7 +17,8 @@ import {
   Barcode,
   Stethoscope,
   ChevronRight,
-  Milestone
+  Milestone,
+  Zap
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -35,6 +36,8 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
   
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [priority, setPriority] = useState<'Routine' | 'STAT' | 'Urgent'>('Routine');
+  const [referringDoc, setReferringDoc] = useState('');
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -69,6 +72,8 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
         patientName: patients.find(p => p.id === selectedPatientId)?.name,
         status: 'Pending' as const,
         orderedBy: profile?.uid || 'Unknown',
+        referringDoc,
+        priority,
         createdAt: new Date().toISOString(),
         testIds: selectedTests
       };
@@ -141,6 +146,13 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                   <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
                     <Clock size={12} /> {formatDate(o.createdAt)}
                   </span>
+                  {o.priority && o.priority !== 'Routine' && (
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1 ${
+                      o.priority === 'STAT' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      <Zap size={10} /> {o.priority}
+                    </span>
+                  )}
                   <span className={`status-pill ${
                     o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
                     o.status === 'In-Progress' ? 'bg-blue-100 text-blue-700' :
@@ -221,6 +233,31 @@ const OrderManager: React.FC<{ profile: UserProfile | null }> = ({ profile }) =>
                         <option key={p.id} value={p.id}>{p.name} ({p.id.substring(0, 6)})</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Clinical Priority</label>
+                      <select 
+                        value={priority}
+                        onChange={(e) => setPriority(e.target.value as any)}
+                        className="w-full bg-white/20 border border-black/5 p-3 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
+                      >
+                        <option value="Routine">Routine</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="STAT">STAT [EMERGENCY]</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Referring Physician</label>
+                      <input 
+                        type="text"
+                        value={referringDoc}
+                        onChange={(e) => setReferringDoc(e.target.value)}
+                        placeholder="Dr. Smith"
+                        className="w-full bg-white/20 border border-black/5 p-3 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div>

@@ -27,6 +27,8 @@ export interface Test {
   normalRange: string;
   unit: string;
   price: number;
+  loinc?: string;
+  snomed?: string;
 }
 
 export type OrderStatus = 'Pending' | 'Collected' | 'In-Progress' | 'Completed' | 'Cancelled';
@@ -40,6 +42,8 @@ export interface Order {
   testIds: string[];
   department?: Department;
   createdAt: string;
+  priority?: 'Routine' | 'STAT' | 'Urgent';
+  lastInterfaceSync?: string;
 }
 
 export interface Result {
@@ -49,6 +53,8 @@ export interface Result {
   testName?: string;
   value: string;
   flag: 'Normal' | 'High' | 'Low';
+  deltaFlag?: string;
   technicianId: string;
   updatedAt: string;
+  loinc?: string;
 }
