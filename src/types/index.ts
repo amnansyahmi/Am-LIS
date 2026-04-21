@@ -33,6 +33,13 @@ export interface Test {
 
 export type OrderStatus = 'Pending' | 'Collected' | 'In-Progress' | 'Completed' | 'Cancelled';
 
+export interface Specimen {
+  id: string;
+  type: string;
+  status: 'Expected' | 'Received' | 'Not Received';
+  receivedAt?: string;
+}
+
 export interface Order {
   id: string;
   patientId: string;
@@ -44,6 +51,21 @@ export interface Order {
   createdAt: string;
   priority?: 'Routine' | 'STAT' | 'Urgent';
   lastInterfaceSync?: string;
+  
+  // New Delphic-spec fields
+  requestNumber?: string;
+  practitioner?: string;
+  location?: string;
+  fasting: 'No' | 'Yes' | 'Unknown';
+  fastingTime?: string;
+  pregnant?: boolean;
+  collectionTime?: string;
+  arrivalTime?: string;
+  lastDoseTime?: string;
+  clinicalDetails?: string;
+  hospitalNumber?: string;
+  referringDoc?: string;
+  specimens: Specimen[];
 }
 
 export interface Result {

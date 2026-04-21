@@ -31,6 +31,14 @@
     @apply px-5 py-2.5 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-all shadow-sm active:scale-95 disabled:opacity-50;
   }
 
+  .modern-input {
+    @apply w-full bg-white border border-black/10 p-3 rounded-xl text-sm font-bold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shrink-0;
+  }
+
+  .input-label {
+    @apply block text-[11px] font-black uppercase text-slate-400 mb-2 tracking-widest ml-1;
+  }
+
   .glass-input {
     @apply bg-white/50 backdrop-blur-md border border-white/30 px-4 py-2.5 rounded-full text-sm text-slate-600 focus:bg-white/80 focus:border-blue-500/50 outline-none transition-all;
   }
