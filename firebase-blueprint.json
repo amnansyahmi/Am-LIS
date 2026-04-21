@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Patient",
+      "description": "Patient demographic information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other"] },
+        "contact": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "dob", "gender"]
+    },
+    "Test": {
+      "title": "Medical Test",
+      "description": "Catalog of available laboratory tests",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "normalRange": { "type": "string" },
+        "unit": { "type": "string" },
+        "price": { "type": "number" }
+      },
+      "required": ["name", "normalRange", "unit"]
+    },
+    "Order": {
+      "title": "Lab Order",
+      "description": "An order containing one or more tests for a patient",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Collected", "In-Progress", "Completed", "Cancelled"] },
+        "orderedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "status", "orderedBy"]
+    },
+    "Result": {
+      "title": "Test Result",
+      "description": "The outcome of a specific lab test",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "testId": { "type": "string" },
+        "value": { "type": "string" },
+        "flag": { "type": "string", "enum": ["Normal", "High", "Low"] },
+        "technicianId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "testId", "value"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "A record of system actions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Role-specific information for system users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Technician", "Doctor"] },
+        "name": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "patients": { "schema": "Patient", "description": "Collection of patient records" },
+    "tests": { "schema": "Test", "description": "Master list of laboratory tests" },
+    "orders": { "schema": "Order", "description": "Diagnostic orders" },
+    "results": { "schema": "Result", "description": "Validated test results" },
+    "auditLogs": { "schema": "AuditLog", "description": "System audit trail" },
+    "users": { "schema": "UserProfile", "description": "User account information" }
+  }
+}
